@@ -1,4 +1,5 @@
 'use strict';
+const util = require('util');
 const path = require('path');
 const chalk = require('chalk');
 const figures = require('figures');
@@ -10,6 +11,9 @@ let isPreviousLogInteractive = false;
 const defaults = pkg.options.default;
 const namespace = pkg.name;
 
+const arrayify = x => {
+  return Array.isArray(x) ? x : [x];
+};
 const now = () => Date.now();
 const timeSpan = then => {
   return (now() - then);
@@ -20,6 +24,7 @@ class Signale {
     this._interactive = options.interactive || false;
     this._config = Object.assign(this.packageConfiguration, options.config);
     this._customTypes = Object.assign({}, options.types);
+    this._disabled = options.disabled || false;
     this._scopeName = options.scope || '';
     this._timers = options.timers || new Map();
     this._types = this._mergeTypes(defaultTypes, this._customTypes);
@@ -44,11 +49,16 @@ class Signale {
   get currentOptions() {
     return Object.assign({}, {
       config: this._config,
+      disabled: this._disabled,
       types: this._customTypes,
       interactive: this._interactive,
       timers: this._timers,
       stream: this._stream
     });
+  }
+
+  get isEnabled() {
+    return !this._disabled;
   }
 
   get date() {
@@ -89,28 +99,8 @@ class Signale {
     return standard;
   }
 
-  _logger(type, ...messageObj) {
-    this._log(this._buildSignale(this._types[type], ...messageObj), this._types[type].stream);
-  }
-
-  _log(message, streams = this._stream) {
-    this._formatStream(streams).forEach(stream => {
-      this._write(stream, message);
-    });
-  }
-
-  _write(stream, message) {
-    if (this._interactive && isPreviousLogInteractive) {
-      stream.moveCursor(0, -1);
-      stream.clearLine();
-      stream.cursorTo(0);
-    }
-    stream.write(message + '\n');
-    isPreviousLogInteractive = this._interactive;
-  }
-
   _formatStream(stream) {
-    return Array.isArray(stream) ? stream : [stream];
+    return arrayify(stream);
   }
 
   _formatDate() {
@@ -131,6 +121,24 @@ class Signale {
 
   _formatTimestamp() {
     return `[${this.timestamp}]`;
+  }
+
+  _formatMessage(str, type) {
+    str = arrayify(str);
+
+    if (this._config.coloredInterpolation) {
+      const _ = Object.assign({}, util.inspect.styles);
+
+      Object.keys(util.inspect.styles).forEach(x => {
+        util.inspect.styles[x] = type.color || _[x];
+      });
+
+      str = util.formatWithOptions({colors: true}, ...str);
+      util.inspect.styles = Object.assign({}, _);
+      return str;
+    }
+
+    return util.format(...str);
   }
 
   _meta() {
@@ -154,6 +162,10 @@ class Signale {
     return meta;
   }
 
+  _hasAdditional({suffix, prefix}, args, type) {
+    return (suffix || prefix) ? '' : this._formatMessage(args, type);
+  }
+
   _buildSignale(type, ...args) {
     let [msg, additional] = [{}, {}];
 
@@ -162,11 +174,11 @@ class Signale {
         [msg] = args;
       } else {
         const [{prefix, message, suffix}] = args;
-        msg = message;
         additional = Object.assign({}, {suffix, prefix});
+        msg = message ? this._formatMessage(message, type) : this._hasAdditional(additional, args, type);
       }
     } else {
-      msg = args.join(' ');
+      msg = this._formatMessage(args, type);
     }
 
     const signale = this._meta();
@@ -192,7 +204,7 @@ class Signale {
       }
     }
 
-    if (msg instanceof Error) {
+    if (msg instanceof Error && msg.stack) {
       const [name, ...rest] = msg.stack.split('\n');
       if (this._config.underlineMessage) {
         signale.push(chalk.underline(name));
@@ -220,8 +232,38 @@ class Signale {
     return signale.join(' ');
   }
 
+  _write(stream, message) {
+    if (this._interactive && isPreviousLogInteractive) {
+      stream.moveCursor(0, -1);
+      stream.clearLine();
+      stream.cursorTo(0);
+    }
+    stream.write(message + '\n');
+    isPreviousLogInteractive = this._interactive;
+  }
+
+  _log(message, streams = this._stream) {
+    if (this.isEnabled) {
+      this._formatStream(streams).forEach(stream => {
+        this._write(stream, message);
+      });
+    }
+  }
+
+  _logger(type, ...messageObj) {
+    this._log(this._buildSignale(this._types[type], ...messageObj), this._types[type].stream);
+  }
+
   config(configObj) {
     this.configuration = configObj;
+  }
+
+  disable() {
+    this._disabled = true;
+  }
+
+  enable() {
+    this._disabled = false;
   }
 
   scope(...name) {
