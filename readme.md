@@ -14,13 +14,16 @@
   <a href="https://travis-ci.org/klauscfhq/signale">
     <img alt="Build Status" src="https://travis-ci.com/klauscfhq/signale.svg?branch=master">
   </a>
+  <a href="https://www.npmjs.com/package/signale">
+    <img alt="NPM Downloads" src="https://img.shields.io/npm/dt/signale.svg">
+  </a>
 </p>
 
 ## Description
 
 Hackable and configurable to the core, signale can be used for logging purposes, status reporting, as well as for handling the output rendering process of other node modules and applications.
 
-Read this document in: [简体中文](https://github.com/klauscfhq/signale/blob/master/docs/readme.zh_CN.md)
+Read this document in: [简体中文](https://github.com/klauscfhq/signale/blob/master/docs/readme.zh_CN.md).
 
 Visit the [contributing guidelines](https://github.com/klauscfhq/signale/blob/master/contributing.md#translating-documentation) to learn more on how to translate this document into more languages.
 
@@ -52,6 +55,7 @@ Come over to [Gitter](https://gitter.im/klauscfhq/signale) or [Twitter](https://
 - [API](#api)
 - [Development](#development)
 - [Related](#related)
+- [Who's Using It?](#whos-using-it)
 - [Team](#team)
 - [License](#license)
 
@@ -758,6 +762,18 @@ For more info on how to contribute to the project, please read the [contributing
 
 - [chalk](https://github.com/chalk/chalk) - Terminal string styling done right
 - [figures](https://github.com/sindresorhus/figures) - Unicode symbols
+
+## Who's Using It?
+
+- [Boostnote](https://github.com/BoostIO/Boostnote)
+- [Docz](https://github.com/pedronauck/docz)
+- [Remix by Ethereum](https://github.com/ethereum/remix)
+- [Semantic Release](https://github.com/semantic-release/semantic-release)
+- [Shower](https://github.com/shower/shower)
+- [Taskbook](https://github.com/klauscfhq/taskbook)
+- [Vant](https://github.com/youzan/vant)
+
+View in detail all the packages and repositories that are using Signale [here](https://github.com/klauscfhq/signale/network/dependents).
 
 ## Team
 
