@@ -7,17 +7,11 @@ const pkgConf = require('pkg-conf');
 const pkg = require('./package.json');
 const defaultTypes = require('./types');
 
+const {green, grey, red, underline, yellow} = chalk;
+
 let isPreviousLogInteractive = false;
 const defaults = pkg.options.default;
 const namespace = pkg.name;
-
-const arrayify = x => {
-  return Array.isArray(x) ? x : [x];
-};
-const now = () => Date.now();
-const timeSpan = then => {
-  return (now() - then);
-};
 
 class Signale {
   constructor(options = {}) {
@@ -29,17 +23,15 @@ class Signale {
     this._timers = options.timers || new Map();
     this._types = this._mergeTypes(defaultTypes, this._customTypes);
     this._stream = options.stream || process.stdout;
-    this._longestLabel = defaultTypes.start.label.length;
+    this._longestLabel = this._getLongestLabel();
 
     Object.keys(this._types).forEach(type => {
       this[type] = this._logger.bind(this, type);
     });
+  }
 
-    for (const type in this._types) {
-      if (this._types[type].label && this._types[type].label.length > this._longestLabel) {
-        this._longestLabel = this._types[type].label.length;
-      }
-    }
+  get _now() {
+    return Date.now();
   }
 
   get scopeName() {
@@ -55,10 +47,6 @@ class Signale {
       timers: this._timers,
       stream: this._stream
     });
-  }
-
-  get isEnabled() {
-    return !this._disabled;
   }
 
   get date() {
@@ -92,6 +80,20 @@ class Signale {
     this._config = Object.assign(this.packageConfiguration, configObj);
   }
 
+  _arrayify(x) {
+    return Array.isArray(x) ? x : [x];
+  }
+
+  _timeSpan(then) {
+    return (this._now - then);
+  }
+
+  _getLongestLabel() {
+    const {_types} = this;
+    const labels = Object.keys(_types).map(x => _types[x].label);
+    return Math.max(...labels.filter(x => x).map(x => x.length));
+  }
+
   _mergeTypes(standard, custom) {
     const types = Object.assign({}, standard);
 
@@ -103,7 +105,7 @@ class Signale {
   }
 
   _formatStream(stream) {
-    return arrayify(stream);
+    return this._arrayify(stream);
   }
 
   _formatDate() {
@@ -127,7 +129,7 @@ class Signale {
   }
 
   _formatMessage(str, type) {
-    str = arrayify(str);
+    str = this._arrayify(str);
 
     if (this._config.coloredInterpolation) {
       const _ = Object.assign({}, util.inspect.styles);
@@ -146,22 +148,28 @@ class Signale {
 
   _meta() {
     const meta = [];
+
     if (this._config.displayDate) {
       meta.push(this._formatDate());
     }
+
     if (this._config.displayTimestamp) {
       meta.push(this._formatTimestamp());
     }
+
     if (this._config.displayFilename) {
       meta.push(this._formatFilename());
     }
+
     if (this._scopeName.length !== 0 && this._config.displayScope) {
       meta.push(this._formatScopeName());
     }
+
     if (meta.length !== 0) {
       meta.push(`${figures.pointerSmall}`);
-      return meta.map(item => chalk.grey(item));
+      return meta.map(item => grey(item));
     }
+
     return meta;
   }
 
@@ -188,7 +196,7 @@ class Signale {
 
     if (additional.prefix) {
       if (this._config.underlinePrefix) {
-        signale.push(chalk.underline(additional.prefix));
+        signale.push(underline(additional.prefix));
       } else {
         signale.push(additional.prefix);
       }
@@ -210,23 +218,23 @@ class Signale {
     if (msg instanceof Error && msg.stack) {
       const [name, ...rest] = msg.stack.split('\n');
       if (this._config.underlineMessage) {
-        signale.push(chalk.underline(name));
+        signale.push(underline(name));
       } else {
         signale.push(name);
       }
-      signale.push(chalk.grey(rest.map(l => l.replace(/^/, '\n')).join('')));
+      signale.push(grey(rest.map(l => l.replace(/^/, '\n')).join('')));
       return signale.join(' ');
     }
 
     if (this._config.underlineMessage) {
-      signale.push(chalk.underline(msg));
+      signale.push(underline(msg));
     } else {
       signale.push(msg);
     }
 
     if (additional.suffix) {
       if (this._config.underlineSuffix) {
-        signale.push(chalk.underline(additional.suffix));
+        signale.push(underline(additional.suffix));
       } else {
         signale.push(additional.suffix);
       }
@@ -246,7 +254,7 @@ class Signale {
   }
 
   _log(message, streams = this._stream) {
-    if (this.isEnabled) {
+    if (this.isEnabled()) {
       this._formatStream(streams).forEach(stream => {
         this._write(stream, message);
       });
@@ -268,6 +276,7 @@ class Signale {
     if (String.prototype.padEnd) {
       return str.padEnd(targetLength);
     }
+
     targetLength -= str.length;
     return str + ' '.repeat(targetLength);
   }
@@ -282,6 +291,10 @@ class Signale {
 
   enable() {
     this._disabled = false;
+  }
+
+  isEnabled() {
+    return !this._disabled;
   }
 
   scope(...name) {
@@ -300,12 +313,12 @@ class Signale {
       label = `timer_${this._timers.size}`;
     }
 
-    this._timers.set(label, Date.now());
+    this._timers.set(label, this._now);
     const message = this._meta();
 
     const report = [
-      chalk.green(this._padEnd(this._types.start.badge, 2)),
-      this._padEnd(chalk.green.underline(label), this._longestLabel + 20),
+      green(this._padEnd(this._types.start.badge, 2)),
+      this._padEnd(green.underline(label), this._longestLabel + 20),
       'Initialized timer...'
     ];
 
@@ -322,15 +335,15 @@ class Signale {
       });
     }
     if (this._timers.has(label)) {
-      const span = timeSpan(this._timers.get(label));
+      const span = this._timeSpan(this._timers.get(label));
       this._timers.delete(label);
 
       const message = this._meta();
       const report = [
-        chalk.red(this._padEnd(this._types.pause.badge, 2)),
-        this._padEnd(chalk.red.underline(label), this._longestLabel + 20),
+        red(this._padEnd(this._types.pause.badge, 2)),
+        this._padEnd(red.underline(label), this._longestLabel + 20),
         'Timer run for:',
-        chalk.yellow(span < 1000 ? span + 'ms' : (span / 1000).toFixed(2) + 's')
+        yellow(span < 1000 ? span + 'ms' : (span / 1000).toFixed(2) + 's')
       ];
 
       message.push(...report);
