@@ -11,7 +11,7 @@
 </div>
 
 <p align="center">
-  <a href="https://travis-ci.org/klaussinani/signale">
+  <a href="https://travis-ci.com/klaussinani/signale">
     <img alt="Build Status" src="https://travis-ci.com/klaussinani/signale.svg?branch=master">
   </a>
   <a href="https://www.npmjs.com/package/signale">
@@ -782,8 +782,8 @@ For more info on how to contribute to the project, please read the [contributing
 
 ## Related
 
-- [chalk](https://github.com/chalk/chalk) - Terminal string styling done right
-- [figures](https://github.com/sindresorhus/figures) - Unicode symbols
+- [qoa](https://github.com/klaussinani/qoa) - Minimal interactive command-line prompts
+- [taskbook](https://github.com/klaussinani/taskbook) - Tasks, boards & notes for the command-line habitat
 
 ## Who's Using It?
 
