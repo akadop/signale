@@ -1,6 +1,6 @@
 {
   "name": "signale",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "👋 Hackable console logger",
   "license": "MIT",
   "repository": "klaussinani/signale",
@@ -20,9 +20,8 @@
     "node": ">=6"
   },
   "files": [
-    "index.js",
-    "signale.js",
-    "types.js"
+    "src",
+    "index.js"
   ],
   "keywords": [
     "hackable",
@@ -43,7 +42,6 @@
   },
   "options": {
     "default": {
-      "coloredInterpolation": false,
       "displayScope": true,
       "displayBadge": true,
       "displayDate": false,

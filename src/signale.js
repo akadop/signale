@@ -1,10 +1,11 @@
 'use strict';
 const util = require('util');
 const path = require('path');
+const readline = require('readline');
 const chalk = require('chalk');
 const figures = require('figures');
 const pkgConf = require('pkg-conf');
-const pkg = require('./package.json');
+const pkg = require('./../package.json');
 const defaultTypes = require('./types');
 
 const {green, grey, red, underline, yellow} = chalk;
@@ -24,6 +25,8 @@ class Signale {
     this._types = this._mergeTypes(defaultTypes, this._customTypes);
     this._stream = options.stream || process.stdout;
     this._longestLabel = this._getLongestLabel();
+    this._secrets = options.secrets || [];
+    this._generalLogLevel = this._validateLogLevel(options.logLevel);
 
     Object.keys(this._types).forEach(type => {
       this[type] = this._logger.bind(this, type);
@@ -45,7 +48,9 @@ class Signale {
       types: this._customTypes,
       interactive: this._interactive,
       timers: this._timers,
-      stream: this._stream
+      stream: this._stream,
+      secrets: this._secrets,
+      logLevel: this._generalLogLevel
     });
   }
 
@@ -76,6 +81,20 @@ class Signale {
     return pkgConf.sync(namespace, {defaults});
   }
 
+  get _longestUnderlinedLabel() {
+    return underline(this._longestLabel);
+  }
+
+  get _logLevels() {
+    return {
+      info: 0,
+      timer: 1,
+      debug: 2,
+      warn: 3,
+      error: 4
+    };
+  }
+
   set configuration(configObj) {
     this._config = Object.assign(this.packageConfiguration, configObj);
   }
@@ -91,7 +110,11 @@ class Signale {
   _getLongestLabel() {
     const {_types} = this;
     const labels = Object.keys(_types).map(x => _types[x].label);
-    return Math.max(...labels.filter(x => x).map(x => x.length));
+    return labels.reduce((x, y) => x.length > y.length ? x : y);
+  }
+
+  _validateLogLevel(level) {
+    return Object.keys(this._logLevels).includes(level) ? level : 'info';
   }
 
   _mergeTypes(standard, custom) {
@@ -102,6 +125,22 @@ class Signale {
     });
 
     return types;
+  }
+
+  _filterSecrets(message) {
+    const {_secrets} = this;
+
+    if (_secrets.length === 0) {
+      return message;
+    }
+
+    let safeMessage = message;
+
+    _secrets.forEach(secret => {
+      safeMessage = safeMessage.replace(new RegExp(secret, 'g'), '[secure]');
+    });
+
+    return safeMessage;
   }
 
   _formatStream(stream) {
@@ -129,22 +168,8 @@ class Signale {
     return `[${this.timestamp}]`;
   }
 
-  _formatMessage(str, type) {
-    str = this._arrayify(str);
-
-    if (this._config.coloredInterpolation) {
-      const _ = Object.assign({}, util.inspect.styles);
-
-      Object.keys(util.inspect.styles).forEach(x => {
-        util.inspect.styles[x] = type.color || _[x];
-      });
-
-      str = util.formatWithOptions({colors: true}, ...str);
-      util.inspect.styles = Object.assign({}, _);
-      return str;
-    }
-
-    return util.format(...str);
+  _formatMessage(str) {
+    return util.format(...this._arrayify(str));
   }
 
   _meta() {
@@ -174,8 +199,8 @@ class Signale {
     return meta;
   }
 
-  _hasAdditional({suffix, prefix}, args, type) {
-    return (suffix || prefix) ? '' : this._formatMessage(args, type);
+  _hasAdditional({suffix, prefix}, args) {
+    return (suffix || prefix) ? '' : this._formatMessage(args);
   }
 
   _buildSignale(type, ...args) {
@@ -187,10 +212,10 @@ class Signale {
       } else {
         const [{prefix, message, suffix}] = args;
         additional = Object.assign({}, {suffix, prefix});
-        msg = message ? this._formatMessage(message, type) : this._hasAdditional(additional, args, type);
+        msg = message ? this._formatMessage(message) : this._hasAdditional(additional, args);
       }
     } else {
-      msg = this._formatMessage(args, type);
+      msg = this._formatMessage(args);
     }
 
     const signale = this._meta();
@@ -210,9 +235,9 @@ class Signale {
     if (this._config.displayLabel && type.label) {
       const label = this._config.uppercaseLabel ? type.label.toUpperCase() : type.label;
       if (this._config.underlineLabel) {
-        signale.push(this._padEnd(chalk[type.color].underline(label), this._longestLabel + 20));
+        signale.push(chalk[type.color](this._padEnd(underline(label), this._longestUnderlinedLabel.length + 1)));
       } else {
-        signale.push(chalk[type.color](this._padEnd(label, this._longestLabel + 1)));
+        signale.push(chalk[type.color](this._padEnd(label, this._longestLabel.length + 1)));
       }
     }
 
@@ -246,18 +271,18 @@ class Signale {
   }
 
   _write(stream, message) {
-    if (this._interactive && isPreviousLogInteractive) {
-      stream.moveCursor(0, -1);
-      stream.clearLine();
-      stream.cursorTo(0);
+    if (this._interactive && stream.isTTY && isPreviousLogInteractive) {
+      readline.moveCursor(stream, 0, -1);
+      readline.clearLine(stream);
+      readline.cursorTo(stream, 0);
     }
 
     stream.write(message + '\n');
     isPreviousLogInteractive = this._interactive;
   }
 
-  _log(message, streams = this._stream) {
-    if (this.isEnabled()) {
+  _log(message, streams = this._stream, logLevel) {
+    if (this.isEnabled() && this._logLevels[logLevel] >= this._logLevels[this._generalLogLevel]) {
       this._formatStream(streams).forEach(stream => {
         this._write(stream, message);
       });
@@ -265,7 +290,9 @@ class Signale {
   }
 
   _logger(type, ...messageObj) {
-    this._log(this._buildSignale(this._types[type], ...messageObj), this._types[type].stream);
+    const {stream, logLevel} = this._types[type];
+    const message = this._buildSignale(this._types[type], ...messageObj);
+    this._log(this._filterSecrets(message), stream, this._validateLogLevel(logLevel));
   }
 
   _padEnd(str, targetLength) {
@@ -282,6 +309,18 @@ class Signale {
 
     targetLength -= str.length;
     return str + ' '.repeat(targetLength);
+  }
+
+  addSecrets(secrets) {
+    if (!Array.isArray(secrets)) {
+      throw new TypeError('Argument must be an array.');
+    }
+
+    this._secrets.push(...secrets);
+  }
+
+  clearSecrets() {
+    this._secrets = [];
   }
 
   config(configObj) {
@@ -318,16 +357,19 @@ class Signale {
     }
 
     this._timers.set(label, this._now);
+
     const message = this._meta();
+    message.push(green(this._padEnd(this._types.start.badge, 2)));
 
-    const report = [
-      green(this._padEnd(this._types.start.badge, 2)),
-      this._padEnd(green.underline(label), this._longestLabel + 20),
-      'Initialized timer...'
-    ];
+    if (this._config.underlineLabel) {
+      message.push(green(this._padEnd(underline(label), this._longestUnderlinedLabel.length + 1)));
+    } else {
+      message.push(green(this._padEnd(label, this._longestLabel.length + 1)));
+    }
 
-    message.push(...report);
-    this._log(message.join(' '));
+    message.push('Initialized timer...');
+    this._log(message.join(' '), this._stream, 'timer');
+
     return label;
   }
 
@@ -344,16 +386,18 @@ class Signale {
       this._timers.delete(label);
 
       const message = this._meta();
-      const report = [
-        red(this._padEnd(this._types.pause.badge, 2)),
-        this._padEnd(red.underline(label), this._longestLabel + 20),
-        'Timer run for:',
-        yellow(span < 1000 ? span + 'ms' : (span / 1000).toFixed(2) + 's')
-      ];
+      message.push(red(this._padEnd(this._types.pause.badge, 2)));
 
-      message.push(...report);
+      if (this._config.underlineLabel) {
+        message.push(red(this._padEnd(underline(label), this._longestUnderlinedLabel.length + 1)));
+      } else {
+        message.push(red(this._padEnd(label, this._longestLabel.length + 1)));
+      }
 
-      this._log(message.join(' '));
+      message.push('Timer run for:');
+      message.push(yellow(span < 1000 ? span + 'ms' : (span / 1000).toFixed(2) + 's'));
+      this._log(message.join(' '), this._stream, 'timer');
+
       return {label, span};
     }
   }

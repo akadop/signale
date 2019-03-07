@@ -37,8 +37,10 @@ Come over to [Gitter](https://gitter.im/klaussinani/signale) or [Twitter](https:
 - Integrated timers
 - Custom pluggable loggers
 - Interactive and regular modes
+- Secrets & sensitive information filtering
 - Filename, date and timestamp support
 - Scoped loggers and timers
+- Scaled logging levels mechanism
 - String interpolation support
 - Multiple configurable writable streams
 - Simple and minimal syntax
@@ -89,6 +91,7 @@ Import signale and start using any of the default loggers.
 - `star`
 - `start`
 - `success`
+- `wait`
 - `warn`
 - `watch`
 - `log`
@@ -122,18 +125,22 @@ const {Signale} = require('signale');
 const options = {
   disabled: false,
   interactive: false,
-  stream: process.stdout,
+  logLevel: 'info',
   scope: 'custom',
+  secrets: [],
+  stream: process.stdout,
   types: {
     remind: {
       badge: '**',
       color: 'yellow',
-      label: 'reminder'
+      label: 'reminder',
+      logLevel: 'info'
     },
     santa: {
       badge: '🎅',
       color: 'red',
-      label: 'santa'
+      label: 'santa',
+      logLevel: 'info'
     }
   }
 };
@@ -178,7 +185,7 @@ custom.success('Custom Success Log');
   <img alt="Default Loggers" src="media/override-defaults.png" width="65%">
 </div>
 
-The `options` object can hold any of the following attributes: `disabled`, `interactive`, `stream`, `scope` and `types`. 
+The `options` object can hold any of the following attributes: `disabled`, `interactive`, `logLevel`, `secrets`, `stream`, `scope` and `types`. 
 
 ##### `disabled`
 
@@ -194,16 +201,30 @@ Disables the logging functionality of all loggers belonging to the created insta
 
 Switches all loggers belonging to the created instance into the interactive mode.
 
+##### `logLevel`
+
+- Type: `String`
+- Default: `'info'`
+
+Sets the general logging level of the created instance. Can be `'info'` - logs all messages of all loggers, `'timer'` - logs only messages of `time`, `timeEnd`, `debug`, `warn`, `error` & `fatal` loggers, `'debug'` - logs only messages of `debug`, `warn`, `error` & `fatal` loggers, `'warn'` - logs only messages of `warn`, `error` & `fatal` loggers & `'error'` - logs only messages of `error` & `fatal` loggers.
+
+##### `secrets`
+
+- Type: `(String|Number)[]`
+- Default: `[]`
+
+An array holding secrets/sensitive-information to be removed from the body and metadata of to-be-logged messages and replaced with the default `'[secure]'` string.
+
 ##### `stream`
 
-- Type: `Writable stream` or `Array of Writable streams`
+- Type: `stream.Writable|stream.Writable[]`
 - Default: `process.stdout`
 
 Destination to which the data is written, can be a single valid [Writable stream](https://nodejs.org/api/stream.html#stream_writable_streams) or an array holding multiple valid Writable streams.
 
 ##### `scope`
 
-- Type: `String` or `Array of Strings`
+- Type: `String|String[]`
 
 Name of the scope the logger is reporting from.
 
@@ -212,6 +233,8 @@ Name of the scope the logger is reporting from.
 - Type: `Object`
 
 Holds the configuration of the custom and default loggers.
+
+Additionally, the configuration object of each custom/default logger type, defined in the `types` option, can hold any of the following attributes: `badge`, `label`, `color`, `logLevel` & `stream`. 
 
 ##### `badge`
 
@@ -230,6 +253,20 @@ The label used to identify the type of the logger.
 - Type: `String`
 
 The color of the label, can be any of the foreground colors supported by [chalk](https://github.com/chalk/chalk#colors).
+
+##### `logLevel`
+
+- Type: `String`
+- Default: `'info'`
+
+The log level corresponding to the logger. Messages originating from the logger are displayed only if the log level is greater or equal to the above described general logging level `logLevel` of the `Signale` instance.
+
+##### `stream`
+
+- Type: `stream.Writable|stream.Writable[]`
+- Default: `process.stdout`
+
+Destination to which the data is written, can be a single valid [Writable stream](https://nodejs.org/api/stream.html#stream_writable_streams) or an array holding multiple valid Writable streams.
 
 ### Scoped Loggers
 
@@ -302,7 +339,6 @@ setTimeout(() => {
   <img alt="Interactive Mode" src="media/interactive-mode.gif" width="65%">
 </div>
 
-
 ### Writable Streams
 
 By default, all signale instances log their messages to the `process.stdout` stream. This can be modified, to match your own preference, through the [`stream`](#stream) property, where you can define a single or multiple valid Writable streams, which will be used by all logger types to log your data. Additionally, it is possible to define one or more Writable streams exclusively for a specific logger type, thus write data independently from the rest logger types.
@@ -327,6 +363,36 @@ signale.error('Message will appear on both `process.stdout` & `process.stderr`')
 
 <div align="center">
   <img alt="Writable Streams" src="media/writable-streams.png" width="73%">
+</div>
+
+### Secrets Filtering
+
+By utilizing the `secrets` option, secrets and other sensitive information can be filtered out from the body as well as the metadata, i.e. scope names etc, of to-be-logged messages. The option is part of the configuration object passed to a `Signale` instance on its initialization, and is of type `Array<String|Number>`. The array can hold multiple secrets, all of which are removed, if present, from the to-be-logged messages and are replaced with the default `'[secure]'` string. Additionally, when the unary `signale.scope(name)` function is used, the returned `Signale` instance inherits all the secrets belonging to its parent. The secrets checking process is performed in a **case-sensitive** manner. Also, the unary [`signale.addSecrets()`](https://github.com/klaussinani/signale#signaleaddsecretssecrets) and the nullary [`signale.clearSecrets()`](https://github.com/klaussinani/signale#signaleclearsecrets) functions are available through the API for adding and clearing secrets respectively.
+
+It is **critical** and **highly recommended** to **not type directly secrets in your code**, thus the following example serves **only** as a simple & easily reproducible usage demonstration.
+
+```js
+const {Signale} = require('signale');
+
+// In reality secrets could be securely fetched/decrypted through a dedicated API 
+const [USERNAME, TOKEN] = ['klaussinani', 'token'];
+
+const logger1 = new Signale({
+  secrets: [USERNAME, TOKEN]
+});
+
+logger1.log('$ exporting USERNAME=%s', USERNAME);
+logger1.log('$ exporting TOKEN=%s', TOKEN);
+
+// `logger2` inherits all secrets from its parent `logger1`
+const logger2 = logger1.scope('parent');
+
+logger2.log('$ exporting USERNAME=%s', USERNAME);
+logger2.log('$ exporting TOKEN=%s', TOKEN);
+```
+
+<div align="center">
+  <img alt="Secrets Filtering" src="media/filter-secrets.png" width="73%">
 </div>
 
 ### Timers
@@ -362,7 +428,6 @@ The following illustrates all the available options with their respective defaul
 ```json
 {
   "signale": {
-    "coloredInterpolation": false,
     "displayScope": true,
     "displayBadge": true,
     "displayDate": false,
@@ -380,13 +445,6 @@ The following illustrates all the available options with their respective defaul
 
 <details>
 <summary>View all of the available options in detail.</summary>
-
-##### `coloredInterpolation`
-
-- Type: `Boolean`
-- Default: `false`
-
-Display the arguments, which replace the placeholder tokens on string interpolation, colored. 
 
 ##### `displayScope`
 
@@ -771,6 +829,46 @@ signale.isEnabled();
 // => false
 ```
 
+#### signale.`addSecrets(secrets)`
+
+Adds new secrets/sensitive-information to the targeted Signale instance.
+
+##### **`secrets`**
+
+- Type: `(String|Number)[]`
+
+Array holding the secrets/sensitive-information to be filtered out.
+
+```js
+const signale = require('signale');
+
+signale.log('$ exporting USERNAME=%s', 'klaussinani');
+//=> $ exporting USERNAME=klaussinani
+
+signale.addSecrets(['klaussinani']);
+
+signale.log('$ exporting USERNAME=%s', 'klaussinani');
+//=> $ exporting USERNAME=[secure]
+```
+
+#### signale.`clearSecrets()`
+
+Removes all secrets/sensitive-information from the targeted Signale instance.
+
+```js
+const signale = require('signale');
+
+signale.addSecrets(['klaussinani']);
+
+signale.log('$ exporting USERNAME=%s', 'klaussinani');
+//=> $ exporting USERNAME=[secure]
+
+signale.clearSecrets();
+
+signale.log('$ exporting USERNAME=%s', 'klaussinani');
+//=> $ exporting USERNAME=klaussinani
+```
+
 ## Development
 
 For more info on how to contribute to the project, please read the [contributing guidelines](https://github.com/klaussinani/signale/blob/master/contributing.md).
@@ -784,6 +882,7 @@ For more info on how to contribute to the project, please read the [contributing
 
 - [qoa](https://github.com/klaussinani/qoa) - Minimal interactive command-line prompts
 - [taskbook](https://github.com/klaussinani/taskbook) - Tasks, boards & notes for the command-line habitat
+- [hyperocean](https://github.com/klaussinani/hyperocean) - Deep oceanic blue Hyper terminal theme
 
 ## Who's Using It?
 
