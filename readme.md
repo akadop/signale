@@ -31,7 +31,7 @@ Come over to [Gitter](https://gitter.im/klaussinani/signale) or [Twitter](https:
 
 ## Highlights
 
-- 16 out-of-the-box loggers
+- 19 out-of-the-box loggers
 - Hackable to the core
 - Clean and beautiful output
 - Integrated timers
@@ -62,6 +62,14 @@ Come over to [Gitter](https://gitter.im/klaussinani/signale) or [Twitter](https:
 - [License](#license)
 
 ## Install
+
+### Yarn
+
+```bash
+yarn add signale
+```
+
+### NPM
 
 ```bash
 npm install signale
@@ -206,7 +214,13 @@ Switches all loggers belonging to the created instance into the interactive mode
 - Type: `String`
 - Default: `'info'`
 
-Sets the general logging level of the created instance. Can be `'info'` - logs all messages of all loggers, `'timer'` - logs only messages of `time`, `timeEnd`, `debug`, `warn`, `error` & `fatal` loggers, `'debug'` - logs only messages of `debug`, `warn`, `error` & `fatal` loggers, `'warn'` - logs only messages of `warn`, `error` & `fatal` loggers & `'error'` - logs only messages of `error` & `fatal` loggers.
+Sets the general logging level of the created instance. Can be one of the following:
+
+- `'info'` - Displays all messages from all loggers.
+- `'timer'` -  Displays messages only from the `time`, `timeEnd`, `debug`, `warn`, `error` & `fatal` loggers.
+- `'debug'` - Displays messages only from the `debug`, `warn`, `error` & `fatal` loggers.
+- `'warn'` - Displays messages only from the `warn`, `error` & `fatal` loggers.
+- `'error'` - Displays messages only from the `error` & `fatal` loggers.
 
 ##### `secrets`
 
@@ -287,7 +301,7 @@ global.success('Successful Operation');
   <img alt="Scope Vanilla" src="media/scope-vanilla.png" width="65%">
 </div>
 
-To create a scoped logger based on an already existing one, use the `scope()` function, which will return a new signale instance, inheriting all custom loggers, timers, streams, configuration, interactive mode & disabled statuses from the initial one.
+To create a scoped logger based on an already existing one, use the `scope()` function, which will return a new signale instance, inheriting all custom loggers, timers, secrets, streams, configuration, log level, interactive mode & disabled statuses from the initial one.
 
 ```js
 const signale = require('signale');
