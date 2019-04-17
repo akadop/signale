@@ -36,6 +36,7 @@ Come over to [Gitter](https://gitter.im/klaussinani/signale) or [Twitter](https:
 - Clean and beautiful output
 - Integrated timers
 - Custom pluggable loggers
+- TypeScript support
 - Interactive and regular modes
 - Secrets & sensitive information filtering
 - Filename, date and timestamp support
@@ -913,6 +914,7 @@ View in detail all the packages and repositories that are using Signale [here](h
 ## Team
 
 - Klaus Sinani [(@klaussinani)](https://github.com/klaussinani)
+- Mario Sinani [(@mario-sinani)](https://github.com/mario-sinani)
 
 ## License
 

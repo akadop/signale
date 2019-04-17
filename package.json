@@ -26,13 +26,18 @@
   ],
   "types": "./types/signale.d.ts",
   "keywords": [
+    "log",
+    "cli",
+    "logger",
+    "logging",
     "hackable",
     "colorful",
-    "console",
-    "logger"
+    "console"
   ],
   "scripts": {
-    "test": "xo"
+    "lint": "xo",
+    "test:ts": "tsc --noEmit -p test",
+    "test": "npm run lint && npm run test:ts"
   },
   "dependencies": {
     "chalk": "^2.3.2",
@@ -41,6 +46,7 @@
   },
   "devDependencies": {
     "@types/node": "^11.11.3",
+    "typescript": "^3.3.3333",
     "xo": "*"
   },
   "options": {
@@ -59,9 +65,6 @@
     }
   },
   "xo": {
-    "space": 2,
-    "ignores": [
-      "test/**"
-    ]
+    "space": 2
   }
 }

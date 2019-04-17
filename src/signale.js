@@ -55,11 +55,13 @@ class Signale {
   }
 
   get date() {
-    return new Date().toLocaleDateString();
+    const _ = new Date();
+    return [_.getFullYear(), _.getMonth() + 1, _.getDate()].join('-');
   }
 
   get timestamp() {
-    return new Date().toLocaleTimeString();
+    const _ = new Date();
+    return [_.getHours(), _.getMinutes(), _.getSeconds()].join(':');
   }
 
   get filename() {
