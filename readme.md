@@ -3,7 +3,7 @@
 </h1>
 
 <h4 align="center">
-  👋 Hackable console logger
+  Highly configurable logging utility
 </h4>
 
 <div align="center">
@@ -914,7 +914,7 @@ View in detail all the packages and repositories that are using Signale [here](h
 ## Team
 
 - Klaus Sinani [(@klaussinani)](https://github.com/klaussinani)
-- Mario Sinani [(@mario-sinani)](https://github.com/mario-sinani)
+- Mario Sinani [(@mariosinani)](https://github.com/mariosinani)
 
 ## License
 
