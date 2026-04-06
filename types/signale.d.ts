@@ -1,7 +1,7 @@
 /* Authors: Resi Respati <https://github.com/resir014>
  *          Kingdaro <https://github.com/kingdaro>
  *          Joydip Roy <https://github.com/rjoydip>
- *          Klaus Sinani <https://github.com/klaussinani>
+ *          Klaudio Sinani <https://github.com/klaudiosinani>
  */
 
 import { Writable as WritableStream } from 'stream';
